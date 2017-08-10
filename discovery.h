@@ -1,17 +1,30 @@
 #pragma once
 
+// Uncomment for MDNS (macOS) and LLMNR (Windows) support otherwise SSPD (Windows) is used
+#define MACOS
+#define DEFAULT_NAME "ehsensor8"
+#ifdef MACOS
 #include <ESP8266mDNS.h>
+#include <ESP8266LLMNR.h>
+#else
 #include <ESP8266SSDP.h>
+#endif
 
 class InitDiscovery : public Runnable {
 private:
   uint32_t run() {
-    if (!MDNS.begin("ehsensor")) {
-      Serial.println("Error setting up MDNS responder!");
-    }
+#ifdef MACOS
     // MDNS
-    MDNS.addService("http", "tcp", 80);  // Add service to MDNS-SD
-    Serial.println("mDNS responder started");
+    if (!MDNS.begin(DEFAULT_NAME)) {
+      Serial.println("Error setting up MDNS responder!");
+    } else {
+      MDNS.addService("http", "tcp", 80);  // Add service to MDNS-SD
+      Serial.println("mDNS responder started");
+    }
+    // LLMNR
+    LLMNR.begin(DEFAULT_NAME);
+    Serial.println("LLMNR reponder started");
+#else
     // SSPD
     http.on("/description.xml", HTTP_GET, [](){
       SSDP.schema(http.client());
@@ -30,7 +43,7 @@ private:
     SSDP.setDeviceType("urn:schemas-upnp-org:device:SensorManagement:1");
     SSDP.begin();
     Serial.printf("SSPD responder started\n");
-
+#endif
     return RUN_DELETE;
   }
 };

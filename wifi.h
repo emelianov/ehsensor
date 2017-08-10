@@ -17,7 +17,8 @@ private:
 //      Serial.println(ssid);
       Serial.print("IP address: ");
       Serial.println(WiFi.localIP());
-     *raiseSemaphore++;
+     *raiseSemaphore = *raiseSemaphore + 1;
+     //event.wifiReady++;
      return RUN_DELETE;
     }
     Serial.print(".");
