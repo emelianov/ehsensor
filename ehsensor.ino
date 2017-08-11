@@ -14,15 +14,16 @@ events event = {0};
 #include <Runnable.h>
 #include "wifi.h"
 #include <ESP8266WebServer.h>
-ESP8266WebServer http(80);
+class Web;
+Web http(80, &event.webReady);
 #include "discovery.h"
 #include "modbus.h"
 
 
 
-class Web : public Runnable {
+class Web : public ESP8266WebServer, public Runnable {
 public:
-  Web(uint16_t* s) {
+  Web(uint16_t port, uint16_t* s) :: ESP8266Server(port) {
     raiseSemaphore = s;
   }
 private:
@@ -54,8 +55,8 @@ void setup(void)
   // Connect to WiFi network
   wifi = new InitWiFi(&event.wifiReady);
   wifi->runNow();
-  web = new Web(&event.webReady);
-  web->runWithSemaphore(&event.wifiReady);
+  //web = new Web(&event.webReady);
+  //web->runWithSemaphore(&event.wifiReady);
   discovery = new InitDiscovery();
   discovery->runWithSemaphore(&event.wifiReady);
   mb = new ModBusSlave();
