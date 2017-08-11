@@ -5,7 +5,9 @@
 #define DEFAULT_NAME "ehsensor8"
 #ifdef MACOS
 #include <ESP8266mDNS.h>
+#ifdef ESP8266LLMNR_H
 #include <ESP8266LLMNR.h>
+#endif
 #else
 #include <ESP8266SSDP.h>
 #endif
@@ -21,12 +23,14 @@ private:
       MDNS.addService("http", "tcp", 80);  // Add service to MDNS-SD
       Serial.println("mDNS responder started");
     }
+    #ifdef ESP8266LLMNR_H
     // LLMNR
     LLMNR.begin(DEFAULT_NAME);
     Serial.println("LLMNR reponder started");
+    #endif
 #else
     // SSPD
-    http.on("/description.xml", HTTP_GET, [](){
+    web.on("/description.xml", HTTP_GET, [](){
       SSDP.schema(http.client());
     });
     Serial.printf("Starting SSDP...\n");

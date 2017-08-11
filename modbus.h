@@ -17,7 +17,7 @@ private:
   bool initDone = false;
   uint32_t run() {
     if (!initDone) {
-      config();
+      begin();
       pinMode(ledPin, OUTPUT);
       pinMode(switchPin, INPUT);
       addCoil(LED_COIL);
