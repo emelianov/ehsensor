@@ -1,15 +1,13 @@
 #pragma once
 
 // Uncomment for MDNS (macOS) and LLMNR (Windows) support otherwise SSPD (Windows) is used
-#define MACOS
+//#define MACOS
 #define DEFAULT_NAME "ehsensor8"
 #ifdef MACOS
-#include <ESP8266mDNS.h>
-#ifdef ESP8266LLMNR_H
-#include <ESP8266LLMNR.h>
-#endif
+ #include <ESP8266mDNS.h>
+ #include <ESP8266LLMNR.h>
 #else
-#include <ESP8266SSDP.h>
+ #include <ESP8266SSDP.h>
 #endif
 
 class InitDiscovery : public Runnable {
@@ -30,8 +28,8 @@ private:
     #endif
 #else
     // SSPD
-    web.on("/description.xml", HTTP_GET, [](){
-      SSDP.schema(http.client());
+    web->on("/description.xml", HTTP_GET, [](){
+      SSDP.schema(web->client());
     });
     Serial.printf("Starting SSDP...\n");
     SSDP.setSchemaURL("description.xml");
