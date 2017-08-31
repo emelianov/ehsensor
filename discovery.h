@@ -2,7 +2,7 @@
 
 #define DEFAULT_NAME "ehsensor8"
 #include <ESP8266mDNS.h>
-#include <ESP8266LLMNR.h>
+//#include <ESP8266LLMNR.h>
 
 class InitDiscovery : public Runnable {
 private:
@@ -15,7 +15,7 @@ private:
       Serial.println("mDNS responder started");
     }
     // LLMNR
-    LLMNR.begin(DEFAULT_NAME);
+//    LLMNR.begin(DEFAULT_NAME);
     Serial.println("LLMNR reponder started");
     return RUN_DELETE;
   }

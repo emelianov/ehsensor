@@ -17,6 +17,7 @@ public:
   uint16_t event = 0;
   void set(T v) {
     val = v;
+    age = 0;
     event++;
   }
   T get() {
@@ -25,6 +26,14 @@ public:
   String toString() {
     return String(val);
   }
+  uint16_t getAge() {
+    return age;
+  }
+  bool isValid() {
+    return true;
+  }
+private:
+  uint16_t age = 0xFFFF;
 };
 
 #define REG_COUNT 32
@@ -44,6 +53,7 @@ InitWiFi* wifi;
 Web* web;
 InitDiscovery* discovery;
 ModBusSlave* mb;
+TSensors* ds;
 
 void setup(void)
 {  
@@ -55,7 +65,9 @@ void setup(void)
   discovery = new InitDiscovery();        // Start discovery services
   discovery->runWithSemaphore(&event.wifiReady);
   mb = new ModBusSlave();                 // Strat ModBus Slave
-  mb->runWithSemaphore(&event.wifiReady); 
+  mb->runWithSemaphore(&event.wifiReady);
+  ds = new TSensors();                    // Start 1-Wire temperature sensors
+  ds->runNow();
 }
 
 void loop() {

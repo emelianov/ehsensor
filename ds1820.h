@@ -1,67 +1,112 @@
-//////////////////////////////////////////////////////
-// EHControl3 2016.4 (c)2016, a.m.emelianov@gmail.com
-// Sensors definitions, constants and routines
-
 #pragma once
 
 #include <DallasTemperature.h>
 
-#define DEVICE_INIT_C 85
-#define DEVICE_MAX_ERROR 3
-#define DEVICE_INTERVAL 2000
-#define DEVICE_AGE_DEF 15
-#define DEVICE_AGE_LOC 0
-
+#define DS_INTERVAL 2000
+#define DS_MAX_COUNT 16
 #define CFG_SENSORS "/sensors.xml"
-#define DEVICE_MAX_COUNT 16
 
 #define OW_PIN 2
 
 struct sensor {
   DeviceAddress device;
-  String        name;
-  float         tCurrent;
-  uint8_t       errCount;
-  int16_t       gid;
-  uint16_t      age;
+  int16_t map;
+  String toString() {
+    char szRet[24];
+    sprintf_P(szRet,PSTR("%X%X%X%X%X%X%X%X"), device[0], device[1], device[2], device[3], device[4], device[5], device[6], device[7]);
+    return String(szRet);
+  }
 };
-
-//OneWire * oneWire;  //(PIN_ONEWIRE);
-//DallasTemperature * sensors;  //(&oneWire);
-
-sensor sens[DEVICE_MAX_COUNT];
 
 OneWire oneWire(OW_PIN);
 
 class TSensors : public DallasTemperature, public Runnable {
   public:
   TSensors() : DallasTemperature(&oneWire) {
-    
+    for (uint8_t i = 0; i < DS_MAX_COUNT; i++) {
+      sens[i].map = -1;
+      memset(sens[i].device, 0, sizeof(DeviceAddress));    //Fill device id with 0
+    }
   }
+  
   void begin() {
     DallasTemperature::begin();
     setResolution(12);
     setWaitForConversion(false);
   }
+
   private:
+  sensor sens[DS_MAX_COUNT];
   bool initDone = false;
+  uint8_t stage = 0;
+  
+  uint32_t request() {
+    requestTemperatures();
+    return 250;
+  }
+  
+  uint32_t response() {
+    uint8_t i;
+    DeviceAddress zerro;
+    memset(zerro, 0, sizeof(DeviceAddress));
+    for (i = 0; i < DS_MAX_COUNT; i++) {
+      if (memcmp(sens[i].device, zerro, sizeof(DeviceAddress)) != 0) {
+        float t = getTempC(sens[i].device);
+        if (t !=  DEVICE_DISCONNECTED_C) {
+          if (sens[i].map != -1) {
+            fReg[sens[i].map].set(t);
+          }
+        }
+      }
+    }
+    return DS_INTERVAL;
+  }
+
+  bool findNew() {
+    bool newDeviceAdded = false;
+    for (uint8_t i = 0; i < getDeviceCount(); i++) {
+      DeviceAddress deviceFound;
+      getAddress(deviceFound, i);
+      uint8_t j = 0;
+      for (j; j < DS_MAX_COUNT; j++) {
+        if (memcmp(sens[j].device, deviceFound, sizeof(DeviceAddress)) == 0) break;
+      }
+      if (j >= DS_MAX_COUNT) {
+        DeviceAddress zerro;
+        memset(zerro, 0, sizeof(DeviceAddress));
+        for (j = 0; j < DS_MAX_COUNT; j++) {
+          if (memcmp(sens[j].device, zerro, sizeof(DeviceAddress)) == 0) {
+            memcpy(sens[j].device, deviceFound, sizeof(DeviceAddress));
+            newDeviceAdded = true;
+            break;
+          }
+        }
+      }
+    }
+    return newDeviceAdded;
+  }
+  
   uint32_t run() {
     if (!initDone) {
-      
+      begin();
+      findNew();
+      initDone = true;
+      return 100;
     } else {
-      
+      stage++;
+      switch (stage) {
+      case 1:
+        return request();
+      break;
+      case 2:
+        stage = 0;
+        return response();
+      break;
+      }
+      return 100;
     }
   }
 };
-
-/*
-String DeviceAddressToString(DeviceAddress address)
-{
-    char szRet[24];
-    sprintf(szRet,"%X%X%X%X%X%X%X%X", address[0], address[1], address[2], address[3], address[4], address[5], address[6], address[7]);
-    return String(szRet);
-}
-*/
 
 /*
 uint32_t readTSensorsResponse();
