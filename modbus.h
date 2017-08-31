@@ -10,7 +10,7 @@ const int ledPin = D0; //GPIO0
 //Modbus Registers Offsets (0-9999)
 const int SWITCH_ISTS = 101;
 //Used Pins
-const int switchPin = D3; //GPIO0
+const int switchPin = 0; //GPIO0
 
 class ModBusSlave : public Runnable, public ModbusIP {
 private:

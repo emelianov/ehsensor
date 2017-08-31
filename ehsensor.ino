@@ -38,6 +38,7 @@ events event = {0};
 #include "web.h"
 #include "discovery.h"
 #include "modbus.h"
+#include "ds1820.h"
 
 InitWiFi* wifi;
 Web* web;
