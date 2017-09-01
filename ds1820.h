@@ -2,11 +2,11 @@
 
 #include <DallasTemperature.h>
 
-#define DS_INTERVAL 2000
+#define DS_INTERVAL 10000
 #define DS_MAX_COUNT 16
 #define CFG_SENSORS "/sensors.xml"
 
-#define OW_PIN 2
+#define OW_PIN D2
 
 struct sensor {
   DeviceAddress device;
@@ -78,6 +78,8 @@ class TSensors : public DallasTemperature, public Runnable {
           if (memcmp(sens[j].device, zerro, sizeof(DeviceAddress)) == 0) {
             memcpy(sens[j].device, deviceFound, sizeof(DeviceAddress));
             newDeviceAdded = true;
+            Serial.println(sens[j].toString());
+            sens[j].map = 0;
             break;
           }
         }
@@ -109,29 +111,6 @@ class TSensors : public DallasTemperature, public Runnable {
 };
 
 /*
-uint32_t readTSensorsResponse();
-uint32_t readTSensors() {
-  sensors->requestTemperatures();
-  taskAddWithDelay(readTSensorsResponse, 250);
-  return 0;  
-}
-
-uint32_t readTSensorsResponse() {
- uint8_t i;
- DeviceAddress zerro;
- memset(zerro, 0, sizeof(DeviceAddress));
-  for (i = 0; i < DEVICE_MAX_COUNT; i++) {
-   if (memcmp(sens[i].device, zerro, sizeof(DeviceAddress)) != 0) {
-    float t = sensors->getTempC(sens[i].device);
-    if (t !=  DEVICE_DISCONNECTED_C) {
-      sens[i].tCurrent = t;
-      sens[i].age = DEVICE_AGE_LOC;
-    }
-   }
-  }
-  taskAddWithDelay(readTSensors, DEVICE_INTERVAL); 
-  return 0;
-}
 extern TinyXML xml;
 extern String xmlOpen;
 extern String xmlTag;
@@ -212,41 +191,4 @@ bool readSensors() {
   return false;
 }
 
-uint32_t initTSensors() {
-  oneWire = new OneWire(pinOneWire);
-  sensors = new DallasTemperature(oneWire);
-  sensors->begin();
-  sensors->setResolution(12);
-  sensors->setWaitForConversion(false);
-  if (readSensors()) {
-    bool newDeviceAdded = false;
-    for (uint8_t i = 0; i < sensors->getDeviceCount(); i++) {
-      DeviceAddress deviceFound;
-      sensors->getAddress(deviceFound, i);
-      uint8_t j = 0;
-      for (j; j < DEVICE_MAX_COUNT; j++) {
-        if (memcmp(sens[j].device, deviceFound, sizeof(DeviceAddress)) == 0) break;
-      }
-      if (j >= DEVICE_MAX_COUNT) {
-        DeviceAddress zerro;
-        memset(zerro, 0, sizeof(DeviceAddress));
-        for (j = 0; j < DEVICE_MAX_COUNT; j++) {
-          if (memcmp(sens[j].device, zerro, sizeof(DeviceAddress)) == 0 && sens[j].gid == 0) {
-            memcpy(sens[j].device, deviceFound, sizeof(DeviceAddress));
-            sens[j].name = "New device";
-            newDeviceAdded = true;
-            break;
-          }
-        }
-      }
-    }
-    if (newDeviceAdded) {
-      saveSensors();
-    }
-    taskAdd(readTSensors);
-  } else {
-    use.sensors = false;
-  }
-  return 0;
-}
 */

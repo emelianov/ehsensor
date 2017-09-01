@@ -12,19 +12,30 @@ const int SWITCH_ISTS = 101;
 //Used Pins
 const int switchPin = 0; //GPIO0
 
+union splitFloat {
+  float f;
+  uint16_t w[2];
+};
+
 uint16_t cbIreg(TRegister* reg, uint16_t val) {
   if (reg->address >= IREG_BASE) {
     uint16_t r = reg->address - IREG_BASE;
     if (r < REG_COUNT) {
-      uint32_t t = (uint32_t)fReg[r].get();
+      splitFloat t;
+      t.f = fReg[0].get();
       if (r == 0) {
-        
+        return t.w[0];
       } else if (r == 1) {
-        
+        return t.w[1];
       }
     }
   }
   return val;
+}
+
+bool cbConn(IPAddress ip) {
+  Serial.println(ip);
+  return true;
 }
 
 class ModBusSlave : public Runnable, public ModbusIP {
@@ -32,13 +43,16 @@ private:
   bool initDone = false;
   uint32_t run() {
     if (!initDone) {
+      onConnect(cbConn);
       begin();
       pinMode(ledPin, OUTPUT);
       pinMode(switchPin, INPUT);
       addCoil(LED_COIL);
       addIsts(SWITCH_ISTS);
-      addIreg(IREG(0));
-      addIreg(IREG(1));
+      addIreg(0);
+      addIreg(1);
+      onGet(IREG(0), cbIreg);
+      onGet(IREG(1), cbIreg);
       initDone = true;
       Serial.println("Modbus server is running...");
     } else {
