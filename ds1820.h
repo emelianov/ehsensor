@@ -25,7 +25,7 @@ class TSensors : public DallasTemperature, public Runnable {
   TSensors() : DallasTemperature(&oneWire) {
     for (uint8_t i = 0; i < DS_MAX_COUNT; i++) {
       sens[i].map = -1;
-      memset(sens[i].device, 0, sizeof(DeviceAddress));    //Fill device id with 0
+      memset(sens[i].device, 0, sizeof(DeviceAddress));    // Fill device id with 0
     }
   }
   

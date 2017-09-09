@@ -15,7 +15,7 @@ private:
       Serial.println("mDNS responder started");
     }
     // LLMNR
-//    LLMNR.begin(DEFAULT_NAME);
+    LLMNR.begin(DEFAULT_NAME);
     Serial.println("LLMNR reponder started");
     return RUN_DELETE;
   }
