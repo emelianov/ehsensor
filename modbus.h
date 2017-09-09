@@ -1,6 +1,5 @@
 #pragma once
 
-#include <Modbus.h>
 #include <ModbusIP_ESP8266.h>
 
 //Modbus Registers Offsets (0-9999)

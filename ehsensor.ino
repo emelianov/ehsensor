@@ -10,6 +10,11 @@ struct events {
   uint16_t wifiReady;
 };
 
+#define PIN_ACT D4
+#define BUSY    digitalWrite(PIN_ACT, LOW);
+#define IDLE    digitalWrite(PIN_ACT, HIGH);
+
+
 template <typename T>
 class SReg {
 public:
@@ -35,14 +40,16 @@ events event = {0};
 
 #include <Runnable.h>
 #include "wifi.h"
+InitWiFi* wifi;
+
 #include "web.h"
-#include "discovery.h"
 #include "modbus.h"
 #include "ds1820.h"
 
-InitWiFi* wifi;
-Web* web;
+#include "discovery.h"
 InitDiscovery* discovery;
+
+#include "modbus.h"
 ModBusSlave* mb;
 
 void setup(void)

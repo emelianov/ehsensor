@@ -1,7 +1,3 @@
-//////////////////////////////////////////////////////
-// EHControl3 2016.4 (c)2016, a.m.emelianov@gmail.com
-// Sensors definitions, constants and routines
-
 #pragma once
 
 #include <DallasTemperature.h>
