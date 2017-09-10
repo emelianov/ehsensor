@@ -50,17 +50,15 @@ events event = {0};
 #include <Runnable.h>
 #include "wifi.h"
 InitWiFi* wifi;
-
 #include "web.h"
-#include "modbus.h"
+#include "update.h"
+WUpdate* up;
 #include "ds1820.h"
-
+TSensors* ds;
 #include "discovery.h"
 InitDiscovery* discovery;
-
 #include "modbus.h"
 ModBusSlave* mb;
-TSensors* ds;
 
 void setup(void)
 {  
@@ -75,6 +73,8 @@ void setup(void)
   mb->runWithSemaphore(&event.wifiReady);
   ds = new TSensors();                    // Start 1-Wire temperature sensors
   ds->runNow();
+  up = new WUpdate();                     // Init update subsystem
+  up->runNow();
 }
 
 void loop() {

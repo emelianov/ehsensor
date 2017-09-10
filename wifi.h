@@ -11,6 +11,7 @@ public:
   InitWiFi(uint16_t* s) {
     WiFi.begin();
     raiseSemaphore = s;
+    autodelete();
   }
 private:
   uint16_t* raiseSemaphore;

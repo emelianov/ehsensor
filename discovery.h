@@ -2,9 +2,13 @@
 
 #define DEFAULT_NAME "ehsensor8"
 #include <ESP8266mDNS.h>
-//#include <ESP8266LLMNR.h>
+#include <ESP8266LLMNR.h>
 
 class InitDiscovery : public Runnable {
+public:
+  InitDiscovery() {
+    autodelete();
+  }
 private:
   uint32_t run() {
     // MDNS

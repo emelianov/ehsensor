@@ -1,24 +1,27 @@
 #pragma once
 
-void handleUpdate() {
-      if(!server.authenticate(adminUsername.c_str(), adminPassword.c_str())) {
-        return server.requestAuthentication();
+//To upload through terminal you can use: curl -F "image=@firmware.tar" ehsensor8.local/update
+
+extern Web* web;
+String adminUsername = "admin";
+String adminPassword = "password3";
+
+void updateHandle() {
+      if(!web->authenticate(adminUsername.c_str(), adminPassword.c_str())) {
+        return web->requestAuthentication();
       }
       BUSY
-      server.sendHeader("Connection", "close");
-      server.sendHeader("Refresh", "15; url=/");
-      server.send(200, "text/plain", (Update.hasError())?"FAIL":"OK");
+      web->sendHeader("Connection", "close");
+      web->sendHeader("Refresh", "10; url=/");
+      web->send(200, "text/plain", (Update.hasError())?"FAIL":"OK");
       ESP.restart();
 }
 
-void handleUpdateUpload() {
+void updateUploadHandle() {
   BUSY
-      HTTPUpload& upload = server.upload();
+      HTTPUpload& upload = web->upload();
       if(upload.status == UPLOAD_FILE_START){
         //WiFiUDP::stopAll();
-        for (uint8_t i = 0; i < RELAY_COUNT; i++) {
-          if (relays[i].pin != -1) { _off(i);}
-        }
         uint32_t maxSketchSpace = (ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000;
         if(!Update.begin(maxSketchSpace)){//start with max available size
           Update.printError(Serial);
@@ -38,3 +41,14 @@ void handleUpdateUpload() {
   IDLE
 }
 
+class WUpdate : public Runnable {
+  public:
+  WUpdate() {
+    autodelete();
+  }
+  private:
+  uint32_t run() {
+    web->on("/update", HTTP_POST, updateHandle, updateUploadHandle);//Update firmware
+    return RUN_DELETE;
+  }
+};
