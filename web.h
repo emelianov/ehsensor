@@ -3,6 +3,7 @@
 #include <FS.h>
 
 void handleGenericFile();
+void handlePrivate();
 
 class Web : public ESP8266WebServer, public Runnable {
 public:
@@ -49,6 +50,7 @@ private:
     if (!initDone) {
       begin();
       runWithoutSemaphore();
+      on("/private", handlePrivate);
       onNotFound(handleGenericFile);
       initDone = true;
       *raiseSemaphore = *raiseSemaphore + 1;
@@ -66,5 +68,15 @@ void handleGenericFile() {
   BUSY
   if(!web->handleFileRead(web->uri()))
     web->send(404, "text/plain", "FileNotFound");
+  IDLE
+}
+
+void handlePrivate() {
+  BUSY
+  char data[400];
+  sprintf(data, ("<?xml version = \"1.0\" encoding=\"UTF-8\" ?><ctrl><private><heap>%d</heap><rssi>%d</rssi><uptime>%ld</uptime></private></ctrl>"), ESP.getFreeHeap(), WiFi.RSSI(),(uint32_t)millis()/1000);
+  web->sendHeader("Connection", "close");
+  web->sendHeader("Cache-Control", "no-store, must-revalidate");
+  web->send(200, "text/xml", data);
   IDLE
 }
