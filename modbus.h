@@ -5,11 +5,11 @@
 //Modbus Registers Offsets (0-9999)
 const int LED_COIL = 100;
 //Used Pins
-const int ledPin = D0; //GPIO0
+const int ledPin = PIN_LED; //GPIO0
 //Modbus Registers Offsets (0-9999)
 const int SWITCH_ISTS = 101;
 //Used Pins
-const int switchPin = 0; //GPIO0
+const int switchPin = PIN_KEY; //GPIO0
 
 union splitFloat {
   float f;
@@ -37,11 +37,9 @@ bool cbConn(IPAddress ip) {
   return true;
 }
 
-class ModBusSlave : public Runnable, public ModbusIP {
-private:
-  bool initDone = false;
-  uint32_t run() {
-    if (!initDone) {
+class ModBusSlave : public ModbusIP {
+public:
+  ModBusSlave() {
       onConnect(cbConn);
       begin();
       pinMode(ledPin, OUTPUT);
@@ -52,13 +50,21 @@ private:
       addIreg(1);
       onGet(IREG(0), cbIreg);
       onGet(IREG(1), cbIreg);
-      initDone = true;
-      Serial.println("Modbus server is running...");
-    } else {
-      task();
-      Ists(SWITCH_ISTS, digitalRead(switchPin));
-      digitalWrite(ledPin, Coil(LED_COIL));
-    }
-    return 100;
   }
 };
+
+ModBusSlave* mb;
+
+uint32_t modbusLoop() {
+      mb->task();
+      mb->Ists(SWITCH_ISTS, digitalRead(switchPin));
+      digitalWrite(ledPin, mb->Coil(LED_COIL));
+      return 100;
+}
+
+uint32_t modbusInit() {
+  mb = new ModBusSlave();
+  taskAdd(modbusLoop);
+  Serial.println("Modbus server is running..."); 
+  return RUN_DELETE;
+}

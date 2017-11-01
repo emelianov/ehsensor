@@ -6,8 +6,6 @@
 #define DS_MAX_COUNT 16
 #define CFG_SENSORS "/sensors.xml"
 
-#define OW_PIN D2
-
 struct sensor {
   DeviceAddress device;
   int16_t map;
@@ -20,38 +18,31 @@ struct sensor {
 
 OneWire oneWire(OW_PIN);
 
-class TSensors : public DallasTemperature, public Runnable {
+class TSensors : public DallasTemperature {
   public:
   TSensors() : DallasTemperature(&oneWire) {
-    for (uint8_t i = 0; i < DS_MAX_COUNT; i++) {
-      sens[i].map = -1;
-      memset(sens[i].device, 0, sizeof(DeviceAddress));    // Fill device id with 0
-    }
-  }
-  
-  void begin() {
-    DallasTemperature::begin();
+    begin();
     setResolution(12);
     setWaitForConversion(false);
   }
+};  
 
-  private:
-  sensor sens[DS_MAX_COUNT];
-  bool initDone = false;
-  uint8_t stage = 0;
-  
-  uint32_t request() {
-    requestTemperatures();
-    return 250;
+TSensors* ds;
+sensor sens[DS_MAX_COUNT];
+  uint32_t dsResponse();
+  uint32_t dsRequest() {
+    ds->requestTemperatures();
+    taskAddWithDelay(dsResponse, 250);
+    return RUN_DELETE;
   }
   
-  uint32_t response() {
+  uint32_t dsResponse() {
     uint8_t i;
     DeviceAddress zerro;
     memset(zerro, 0, sizeof(DeviceAddress));
     for (i = 0; i < DS_MAX_COUNT; i++) {
       if (memcmp(sens[i].device, zerro, sizeof(DeviceAddress)) != 0) {
-        float t = getTempC(sens[i].device);
+        float t = ds->getTempC(sens[i].device);
         if (t !=  DEVICE_DISCONNECTED_C) {
           if (sens[i].map != -1) {
             fReg[sens[i].map].set(t);
@@ -62,11 +53,11 @@ class TSensors : public DallasTemperature, public Runnable {
     return DS_INTERVAL;
   }
 
-  bool findNew() {
+  bool dsFindNew() {
     bool newDeviceAdded = false;
-    for (uint8_t i = 0; i < getDeviceCount(); i++) {
+    for (uint8_t i = 0; i < ds->getDeviceCount(); i++) {
       DeviceAddress deviceFound;
-      getAddress(deviceFound, i);
+      ds->getAddress(deviceFound, i);
       uint8_t j = 0;
       for (j; j < DS_MAX_COUNT; j++) {
         if (memcmp(sens[j].device, deviceFound, sizeof(DeviceAddress)) == 0) break;
@@ -87,28 +78,17 @@ class TSensors : public DallasTemperature, public Runnable {
     }
     return newDeviceAdded;
   }
-  
-  uint32_t run() {
-    if (!initDone) {
-      begin();
-      findNew();
-      initDone = true;
-      return 100;
-    } else {
-      stage++;
-      switch (stage) {
-      case 1:
-        return request();
-      break;
-      case 2:
-        stage = 0;
-        return response();
-      break;
-      }
-      return 100;
-    }
+
+uint32_t dsInit() {
+  ds = new TSensors();
+  for (uint8_t i = 0; i < DS_MAX_COUNT; i++) {
+    sens[i].map = -1;
+    memset(sens[i].device, 0, sizeof(DeviceAddress));    // Fill device id with 0
   }
-};
+  dsFindNew();
+  taskAdd(dsRequest);
+  return RUN_DELETE;
+}
 
 /*
 extern TinyXML xml;
