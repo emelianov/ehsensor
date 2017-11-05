@@ -1,11 +1,17 @@
 #pragma once
 #include <ESP8266WebServer.h>
+
 void handleGenericFile();
 void handlePrivate();
 void listFile();
 uint32_t restartESP();
 uint32_t formatSPIFFS();
+void handleReboot();
+void handleFormat();
+void handleFile();
 void handleFileUpload();
+#undef F
+#define F String
 
 class Web : public ESP8266WebServer {
 public:
@@ -13,6 +19,7 @@ public:
     begin();
     onNotFound(handleGenericFile);
   }
+  
   String getContentType(String filename){
     if(hasArg(F("download"))) return F("application/octet-stream");
     else if(filename.endsWith(F(".htm"))) return F("text/html");
@@ -29,19 +36,24 @@ public:
     else if(filename.endsWith(F(".gz"))) return F("application/x-gzip");
   return "text/plain";
   }
+  
   bool handleFileRead(String path){
     if(path.endsWith(F("/"))) path += F("index.html");
     String contentType = getContentType(path);
     String pathWithGz = path + F(".gz");
-    if(SPIFFS.exists(pathWithGz) || SPIFFS.exists(path)){
-      if(SPIFFS.exists(pathWithGz))
-        path += F(".gz");
+    if(SPIFFS.exists(pathWithGz))
+      path += F(".gz");
+    if(SPIFFS.exists(path)){
       sendHeader("Connection", "close");
       sendHeader("Cache-Control", "no-store, must-revalidate");
       sendHeader("Access-Control-Allow-Origin", "*");
+      Serial.println(1);
       File file = SPIFFS.open(path, "r");
+      Serial.println(2);
       size_t sent = streamFile(file, contentType);
+      Serial.println(sent);
       file.close();
+      Serial.println(4);
       return true;
     }
     return false;
@@ -59,12 +71,12 @@ uint32_t webInit() {
   web = new Web(80);
   web->on("/private", handlePrivate);
   web->on("/list", listFile);
-  web->on("/reboot", restartESP);
-  web->on("/format", formatSPIFFS);
-  web->on("/edit", handleFileUpload);
+  web->on("/reboot", handleReboot);
+  web->on("/format", handleFormat);
+  web->on("/edit", HTTP_POST, handleFile, handleFileUpload);
   event.webReady++;
   taskAdd(webLoop);
-  Serial.println("Web server is running...");
+  Serial.print("[HTTP started]");
   return RUN_DELETE;
 }
 
@@ -87,12 +99,9 @@ void handlePrivate() {
   IDLE
 }
 void listFile() {
-  // Authentification
-#ifdef UPLOADPASS
-  if(!server.authenticate(UPLOADUSER, UPLOADPASS)) {
-    return server.requestAuthentication();
+  if(!web->authenticate(adminUsername.c_str(), adminPassword.c_str())) {
+    return web->requestAuthentication();
   }
-#endif
   String output = F("<html><head><meta charset='utf-8'>\
   <title>WiFiSocket - Maintains</title>\
 \
@@ -185,6 +194,12 @@ h4,h4{font-size:18px}\
     output += F("<br>");
     entry.close();
   }
+ #ifndef ESP8266
+  output += F("Used/Total ");
+  output += SPIFFS.usedBytes();
+  output += F("/");
+  output += SPIFFS.totalBytes();
+ #endif
   output += F("</div></div>\
 \
 <div class='container'><div class='well'>\
@@ -200,8 +215,8 @@ h4,h4{font-size:18px}\
  <b>Resets</b>\
  <hr>\
   <form method='POST' action='/list' enctype='multipart/form-data'>\
-  <input type='button' value='Reboot' onClick='if(confirm(\"Reboot device?\")) window.location=\"/reboot\";return true;'><br>\
-  <input type='button' value='Format filesystem' onClick='if(confirm(\"Formet file system and destroy all stored data?\")) window.location=\"/format\";return true;'></form>\
+  <input type='button' value='Reboot' onClick='if(confirm(\'Reboot device?\')) window.location=\'/reboot\';return true;'><br>\
+  <input type='button' value='Format filesystem' onClick='if(confirm(\'Format file system and destroy all stored data?\')) window.location=\'/format\';return true;'></form>\
 </div></div>\
 </body><html>");
   web->sendHeader("Connection", "close");
@@ -211,11 +226,9 @@ h4,h4{font-size:18px}\
 }
 // Delete file callback
 void handleDelete() {
-#ifdef UPLOADPASS
-  if(!server.authenticate(UPLOADUSER, UPLOADPASS)) {
-    return server.requestAuthentication();
+  if(!web->authenticate(adminUsername.c_str(), adminPassword.c_str())) {
+    return web->requestAuthentication();
   }
-#endif
   web->sendHeader("Connection", "close");
   web->sendHeader("Cache-Control", "no-store, must-revalidate");
   web->sendHeader("Refresh", "5; url=/list");
@@ -239,11 +252,9 @@ void handleDelete() {
 }
 
 void handleReboot() {
-#ifdef UPLOADPASS
-  if(!server.authenticate(UPLOADUSER, UPLOADPASS)) {
-    return server.requestAuthentication();
+  if(!web->authenticate(adminUsername.c_str(), adminPassword.c_str())) {
+    return web->requestAuthentication();
   }
-#endif
   web->sendHeader("Connection", "close");
   web->sendHeader("Cache-Control", "no-store, must-revalidate");
   web->sendHeader("Refresh", "7; url=/");
@@ -252,36 +263,38 @@ void handleReboot() {
 }
 
 void handleFormat() {
-#ifdef UPLOADPASS
-  if(!server.authenticate(UPLOADUSER, UPLOADPASS)) {
-    return server.requestAuthentication();
+  if(!web->authenticate(adminUsername.c_str(), adminPassword.c_str())) {
+    return web->requestAuthentication();
   }
-#endif
   web->sendHeader("Connection", "close");
   web->sendHeader("Cache-Control", "no-store, must-revalidate");
-  web->sendHeader("Refresh", "15; url=/");
-  taskAddWithDelay(formatSPIFFS, 500);
+  web->sendHeader("Refresh", "15; url=/list");
+  taskAdd(formatSPIFFS);
   web->send(200, "text/plain", "Formatting...");
 }
 
+void handleFile() {
+  if(!web->authenticate(adminUsername.c_str(), adminPassword.c_str())) {
+    return web->requestAuthentication();
+  }
+  web->sendHeader("Connection", "close");
+  web->sendHeader("Cache-Control", "no-store, must-revalidate");
+  web->sendHeader("Access-Control-Allow-Origin", "*");
+  web->sendHeader("Refresh", "5; url=/list");
+  web->send(200, "text/plain", "OK");  
+}
 File fsUploadFile;
 void handleFileUpload(){
-  Serial.println("UPLOAD");
-#ifdef UPLOADPASS
-  if(!server.authenticate(UPLOADUSER, UPLOADPASS)) {
-    return server.requestAuthentication();
+  if(!web->authenticate(adminUsername.c_str(), adminPassword.c_str())) {
+    return web->requestAuthentication();
   }
-#endif
   if(web->uri() != "/edit") return;
   BUSY
   HTTPUpload& upload = web->upload();
-  Serial.println("UPLOAD 1");
   if(upload.status == UPLOAD_FILE_START){
-    Serial.println("UPLOAD 2");
     String filename = upload.filename;
     if(!filename.startsWith("/")) filename = "/"+filename;
     fsUploadFile = SPIFFS.open(filename, "w");
-    Serial.println("UPLOAD 3");
     filename = String();
   } else if(upload.status == UPLOAD_FILE_WRITE){
     if(fsUploadFile) {
@@ -291,6 +304,7 @@ void handleFileUpload(){
       Serial.print("X");
     }
   } else if(upload.status == UPLOAD_FILE_END){
+    Serial.println(upload.currentSize);
     if(fsUploadFile)
       fsUploadFile.close();
   }

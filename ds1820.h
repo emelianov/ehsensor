@@ -11,7 +11,7 @@ struct sensor {
   int16_t map;
   String toString() {
     char szRet[24];
-    sprintf_P(szRet,PSTR("%X%X%X%X%X%X%X%X"), device[0], device[1], device[2], device[3], device[4], device[5], device[6], device[7]);
+    sprintf(szRet,"%X%X%X%X%X%X%X%X", device[0], device[1], device[2], device[3], device[4], device[5], device[6], device[7]);
     return String(szRet);
   }
 };

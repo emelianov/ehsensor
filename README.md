@@ -1,2 +1,2 @@
 # ehsensor
-ESP8266-based Home automation solution
+ESP8266/ESP32-based Home automation solution
