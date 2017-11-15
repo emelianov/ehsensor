@@ -1,6 +1,6 @@
 #pragma once
 #include <ESP8266WebServer.h>
-
+#include <detail/RequestHandlersImpl.h> // for StaticRequestHandler::getContentType(path);
 void handleGenericFile();
 void handlePrivate();
 void listFile();
@@ -10,8 +10,10 @@ void handleReboot();
 void handleFormat();
 void handleFile();
 void handleFileUpload();
+#ifdef ESP8266
 #undef F
 #define F String
+#endif
 
 class Web : public ESP8266WebServer {
 public:
@@ -19,7 +21,7 @@ public:
     begin();
     onNotFound(handleGenericFile);
   }
-  
+/* 
   String getContentType(String filename){
     if(hasArg(F("download"))) return F("application/octet-stream");
     else if(filename.endsWith(F(".htm"))) return F("text/html");
@@ -36,10 +38,10 @@ public:
     else if(filename.endsWith(F(".gz"))) return F("application/x-gzip");
   return "text/plain";
   }
-  
+*/
   bool handleFileRead(String path){
     if(path.endsWith(F("/"))) path += F("index.html");
-    String contentType = getContentType(path);
+    String contentType = StaticRequestHandler::getContentType(path);
     String pathWithGz = path + F(".gz");
     if(SPIFFS.exists(pathWithGz))
       path += F(".gz");
